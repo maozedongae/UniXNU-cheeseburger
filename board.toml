@@ -22,8 +22,6 @@ archives = [
   "build-arm-driver.py ArmDTPlatform",
   "build-arm-driver.py ArmCpu",
   "build-libpthread-kernel.py",
-  "build-boot-progress.py",
-  "build-native-legacy-display.py",
 ]
 
 [kernel.prelink]
@@ -50,7 +48,6 @@ kernel_args = [
   "cpus=1",
   "keepsyms=1",
   "kt_fixed_zones=240",
-  "boot-progress=2",
 ]
 
 [payload.adt]
