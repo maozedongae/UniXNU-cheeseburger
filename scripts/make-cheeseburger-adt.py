@@ -647,7 +647,7 @@ def main():
 
     chosen.set_prop('chip-id', struct.pack('<I', args.chip_id))
     chosen.set_prop('unique-chip-id', struct.pack('<Q', args.unique_chip_id))
-    chosen.set_prop('board-id', struct.pack('<I', 2))
+    chosen.set_prop('board-id', struct.pack('<I', 6))
     chosen.set_prop('osenvironment', b'main\0')
     chosen.set_prop('crypto-hash-method', b'sha2-384\0')
     chosen.set_prop('boot-manifest-hash', bytes(48))
