@@ -1,0 +1,59 @@
+[board]
+name = "cheeseburger"
+soc = "MSM8998"
+description = "OnePlus 5"
+kit = "cheeseburger"
+
+[ipsw]
+url = "https://updates.cdn-apple.com/2024SpringFCS/fullrestores/062-47894/28C6D3CB-F9DF-4839-B3BB-E7CA850CEB80/iPhone10,3,iPhone10,6_16.7.10_20H350_Restore.ipsw"
+product = "iPhone10,3"
+version = "16.7.10"
+build = "20H350"
+device_class = "d22ap"
+chip_id = 0x8015
+board_id = 2
+fetch = ["KernelCache", "DeviceTree", "StaticTrustCache"]
+
+[kernel]
+defconfig = "cheeseburger_defconfig"
+archives = [
+  "build-corecrypto-14.py",
+  "build-corecrypto-14.py --namespace",
+  "build-arm-driver.py ArmDTPlatform",
+  "build-arm-driver.py ArmCpu",
+  "build-libpthread-kernel.py",
+  "build-boot-progress.py",
+  "build-native-legacy-display.py",
+]
+
+[kernel.prelink]
+tool = "kits/NativePrelink/emit_prelink.py"
+kernel = "build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837.unstripped.noctf"
+slide = "-0x1000000"
+roots = [
+  "com.apple.driver.AppleARMPlatform",
+]
+extra_args = []
+
+[payload]
+volume = "ONEPLUS"
+size_mib = 192
+loader = "firmware"
+title = "XNU Kernel"
+dram_size = "0x180000000"
+panic_screen = true
+timeout = 3
+kernel_args = [
+  "-v",
+  "serial=3",
+  "debug=0x14e",
+  "cpus=1",
+  "keepsyms=1"
+]
+
+[payload.adt]
+tool = "scripts/make-cheeseburger-adt.py"
+chip_id = "0x8998"
+owned_memory_size = "0x10000000"
+cpu_regs = "0"
+unique_chip_id = "required"
