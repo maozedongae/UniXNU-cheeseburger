@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
+KIT = ROOT / 'kits/cheeseburger'
 OUT = ROOT / 'build/native-legacy-display'
 OUT.mkdir(parents=True, exist_ok=True)
 
@@ -20,9 +21,7 @@ def sha(p: Path) -> str:
 
 pr = json.loads(
     (ROOT / 'build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/osfmk/DEVELOPMENT/startup.o.json')
-    .read_text()
-    .strip()
-    .rstrip(',')
+    .read_text().strip().rstrip(',')
 )
 
 base_cmd = []
@@ -43,38 +42,49 @@ while j < len(pa):
     j += 1
 
 base_cmd += [
-    '-Wall', '-Wextra', '-Wno-unused-parameter',
+    '-Wall', '-Wextra', '-Werror', '-Wno-unused-parameter',
     '-mgeneral-regs-only',
     '-I', str(ROOT / '.cache/xnu-work/osfmk'),
-    '-I', str(ROOT / 'kits/sheng'),
+    '-I', str(KIT),
 ]
 
-# Generate clean _native_legacy_display_late_probe implementation for MSM8998 GOP console
 probe_c = OUT / 'CheeseburgerLegacyDisplayProbe.c'
 probe_c.write_text('''// SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <stdint.h>
+#include <pexpert/pexpert.h>
 
 extern void kprintf(const char *fmt, ...);
+extern void boot_progress_stage(const char *text) __attribute__((weak_import));
+
+volatile uint32_t native_legacy_stage = 0;
+
+void native_legacy_display_probe(void);
+void native_legacy_display_probe(void)
+{
+    native_legacy_stage = 1;
+}
 
 void native_legacy_display_late_probe(void);
 void native_legacy_display_late_probe(void)
 {
-    kprintf("[cheeseburger] native_legacy_display_late_probe: GOP framebuffer console active\\n");
+    native_legacy_stage = 2;
+    if (boot_progress_stage) {
+        boot_progress_stage("cheeseburger: GOP framebuffer console ready");
+    }
+    kprintf("[cheeseburger] native_legacy_display_late_probe: GOP framebuffer active\\n");
 }
 ''')
 
 c_units = [
     (probe_c, OUT / 'LegacyDisplayProbe.o'),
-    (ROOT / 'kits/sheng/BootProcessProbe.c', OUT / 'BootProcessProbe.o'),
-    (ROOT / 'kits/sheng/BootUiTraceProbe.c', OUT / 'BootUiTraceProbe.o'),
-    (ROOT / 'kits/sheng/BootLog.c', OUT / 'BootLog.o'),
-    (ROOT / 'kits/sheng/BootReset.c', OUT / 'BootReset.o'),
+    (KIT / 'BootProcessProbe.c', OUT / 'BootProcessProbe.o'),
+    (KIT / 'BootUiTraceProbe.c', OUT / 'BootUiTraceProbe.o'),
+    (KIT / 'BootLog.c', OUT / 'BootLog.o'),
+    (KIT / 'BootReset.c', OUT / 'BootReset.o'),
 ]
 
 objs = []
 for src, obj in c_units:
-    if not src.exists():
-        continue
     cmd = [
         str(src) if a == '__SOURCE__' else str(obj) if a == '__OBJECT__' else a
         for a in base_cmd
@@ -92,4 +102,4 @@ run(['xcrun', 'ar', 'rcs', str(archive), *[str(o) for o in objs]])
     'board': 'cheeseburger',
 }, indent=2) + '\n')
 
-print('PASS: built libNativeLegacyDisplay.late.a for cheeseburger (MSM8998)')
+print('PASS: cheeseburger libNativeLegacyDisplay.late.a built')

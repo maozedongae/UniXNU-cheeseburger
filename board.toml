@@ -48,7 +48,9 @@ kernel_args = [
   "serial=3",
   "debug=0x14e",
   "cpus=1",
-  "keepsyms=1"
+  "keepsyms=1",
+  "kt_fixed_zones=240",
+  "boot-progress=2",
 ]
 
 [payload.adt]
