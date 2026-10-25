@@ -62,6 +62,10 @@ kernel = "build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837.u
 slide = "-0x1000000"
 roots = [
   "com.apple.driver.AppleARMPlatform",
+  "com.apple.kec.corecrypto",
+  "com.apple.kec.pthread",
+  "com.apple.kext.CoreTrust",
+  "com.apple.security.AppleImage4",
 ]
 extra_args = []
 
