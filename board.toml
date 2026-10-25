@@ -60,12 +60,18 @@ archives = [
 tool = "kits/NativePrelink/emit_prelink.py"
 kernel = "build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837.unstripped.noctf"
 slide = "-0x1000000"
+early_security_init = "com.apple.driver.AppleMobileFileIntegrity=0xfffffff005ab4ae0"
 roots = [
   "com.apple.driver.AppleARMPlatform",
+  "com.apple.driver.AppleMobileFileIntegrity",
+  "com.apple.iokit.CoreAnalyticsFamily",
+  "com.apple.iokit.IOReportFamily",
   "com.apple.kec.Libm",
   "com.apple.kec.corecrypto",
+  "com.apple.kext.AppleMatch",
   "com.apple.kext.CoreTrust",
   "com.apple.security.AppleImage4",
+  "com.apple.security.sandbox",
 ]
 extra_args = []
 
