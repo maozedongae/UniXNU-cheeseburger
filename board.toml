@@ -40,7 +40,8 @@ packages = [
   "{uefi}/Silicium-ACPI/Platforms/OnePlus",
   "{uefi}/Silicium-ACPI/Silicon/Qualcomm",
 ]
-
+[bootimg]
+embed_payload = true
 [firmware.defines]
 DEVICE_MODEL = "cheeseburger"
 ENABLE_SECUREBOOT = "0"
@@ -79,6 +80,7 @@ kernel_args = [
   "cpus=1",
   "keepsyms=1",
   "kt_fixed_zones=240",
+  "secluded_mem_mb=0",
 ]
 
 [payload.adt]
@@ -87,3 +89,6 @@ chip_id = "0x8998"
 owned_memory_size = "0x10000000"
 cpu_regs = "0"
 unique_chip_id = "0x000089981030d22a"
+
+[bootimg.image]
+embed_payload = true

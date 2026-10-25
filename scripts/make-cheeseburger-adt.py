@@ -170,17 +170,14 @@ class DTNode:
 
 def _find_adt_root_offset(blob: bytes) -> int:
     """Locate the start of the root 'device-tree' node (handles raw ADT and IM4P)."""
-    # Fast check at offset 0 (standard raw .adt)
     if len(blob) >= 44:
         nprops, nchildren = struct.unpack_from('<II', blob, 0)
         if 1 <= nprops <= 256 and 1 <= nchildren <= 256:
             return 0
 
-    # Scan for the 'name' property with value 'device-tree\0'
     needle = b'name' + (b'\x00' * 28) + struct.pack('<I', 12) + b'device-tree\x00'
     pos = blob.find(needle)
     if pos >= 8:
-        # Check if 'name' is the very first property of the root node
         nprops, nchildren = struct.unpack_from('<II', blob, pos - 8)
         if 1 <= nprops <= 256 and 1 <= nchildren <= 256:
             return pos - 8
@@ -326,7 +323,6 @@ def build_psci_node(method: str = 'smc') -> DTNode:
 
 def build_msm8998_arm_io(armio_phandle: int = 27, intc_phandle: int = 28) -> DTNode:
     """Construct clean /arm-io for MSM8998 using Variant A (0x17000000 APSS window)."""
-    # QuSB2 PHY init sequence from OnePlus 5 cheeseburger.dtsi override
     qusb2_init_seq = struct.pack(
         '<16I',
         0x80, 0x000,
@@ -347,8 +343,8 @@ def build_msm8998_arm_io(armio_phandle: int = 27, intc_phandle: int = 28) -> DTN
             ('device_type', b'interrupt-controller\0'),
             ('interrupt-controller', b''),
             ('#interrupt-cells', struct.pack('<I', 3)),
-            ('#address-cells', struct.pack('<I', 2)),
-            ('#size-cells', struct.pack('<I', 2)),
+            ('#address-cells', struct.pack('<I', 0)),
+            ('#size-cells', struct.pack('<I', 0)),
             ('#redistributor-regions', struct.pack('<I', 1)),
             ('redistributor-stride', struct.pack('<Q', GIC_REDIST_STRIDE)),
             ('reg', struct.pack(
@@ -394,7 +390,7 @@ def build_msm8998_arm_io(armio_phandle: int = 27, intc_phandle: int = 28) -> DTN
             ('device_type', b'ufshc\0'),
             ('lanes-per-direction', struct.pack('<I', 1)),
             ('interrupt-parent', struct.pack('<I', intc_phandle)),
-            ('interrupts', struct.pack('<I', 265)),
+            ('interrupts', struct.pack('<3I', 0, 265, 4)),
             ('qcom,ufshc-phys-reg', struct.pack('<2Q', UFS_HC_PHYS, UFS_HC_SIZE)),
             ('qcom,ufsphy-phys-reg', struct.pack('<2Q', UFS_PHY_PHYS, UFS_PHY_SIZE)),
             ('qcom,ufsice-phys-reg', struct.pack('<2Q', UFS_ICE_PHYS, UFS_ICE_SIZE)),
@@ -405,7 +401,7 @@ def build_msm8998_arm_io(armio_phandle: int = 27, intc_phandle: int = 28) -> DTN
             ('compatible', b'qcom,msm-uartdm-v1.4\0qcom,msm-uartdm\0'),
             ('device_type', b'uart\0'),
             ('interrupt-parent', struct.pack('<I', intc_phandle)),
-            ('interrupts', struct.pack('<I', 114)),
+            ('interrupts', struct.pack('<3I', 0, 114, 4)),
             ('qcom,uart-phys-reg', struct.pack('<2Q', UART_BLSP2_DM1_PHYS, UART_BLSP2_DM1_SIZE)),
         ]),
 
@@ -414,7 +410,7 @@ def build_msm8998_arm_io(armio_phandle: int = 27, intc_phandle: int = 28) -> DTN
             ('compatible', b'qcom,dwc-usb3-msm\0snps,dwc3\0'),
             ('device_type', b'usb\0'),
             ('interrupt-parent', struct.pack('<I', intc_phandle)),
-            ('interrupts', struct.pack('<I', 131)),
+            ('interrupts', struct.pack('<3I', 0, 131, 4)),
             ('qcom,dwc3-phys-reg', struct.pack('<2Q', USB3_DWC3_PHYS, USB3_DWC3_SIZE)),
             ('qcom,qusb2phy-phys-reg', struct.pack('<2Q', USB3_QUSB2PHY_PHYS, USB3_QUSB2PHY_SIZE)),
             ('qcom,ssphy-phys-reg', struct.pack('<2Q', USB3_SSPHY_PHYS, USB3_SSPHY_SIZE)),
@@ -629,6 +625,7 @@ def main():
     enforce_d22ap_identity(root)
     root.remove_child('pram')
     root.remove_child('vram')
+    root.remove_child('baseband')
 
     # 4. Patch /chosen and /chosen/memory-map for DarwinBoot & Hactivation
     chosen = root.get_child('chosen')
@@ -636,7 +633,6 @@ def main():
         chosen = DTNode('chosen')
         root.children.insert(0, chosen)
 
-    # Remove Apple AMCC CTRR lock-regs (causes Data Abort on Qualcomm MMIO)
     chosen.remove_child('lock-regs')
 
     chosen.set_prop('random-seed', os.urandom(64))
@@ -652,7 +648,6 @@ def main():
     chosen.set_prop('crypto-hash-method', b'sha2-384\0')
     chosen.set_prop('boot-manifest-hash', bytes(48))
 
-    # Hactivation tuple (0, 0, 1, 1) + AMFI / SEP flags
     chosen.set_prop('certificate-production-status', struct.pack('<I', 0))
     chosen.set_prop('effective-production-status-ap', struct.pack('<I', 0))
     chosen.set_prop('effective-production-status-sep', struct.pack('<I', 0))
@@ -683,19 +678,14 @@ def main():
     if args.text_fixup:
         chosen.set_prop('text-fixups', b''.join(f.encode('utf-8') + b'\0' for f in args.text_fixup))
 
-    # Populate valid 8 KiB CHRP NVRAM proxy bank
     for nv_key, nv_val in build_empty_nvram_proxy():
         chosen.set_prop(nv_key, nv_val)
 
-    # Ensure /chosen/memory-map has mandatory 16-byte zeroed placeholders for DarwinBoot.efi
     mem_map = chosen.get_child('memory-map')
     if mem_map is None:
         mem_map = DTNode('memory-map', [('AAPL,phandle', struct.pack('<I', 7))])
         chosen.children.insert(0, mem_map)
 
-    mem_map.set_prop('RAMDisk', bytes(16))
-    mem_map.set_prop('PackedRAMDisk', bytes(16))
-    mem_map.set_prop('TrustCache', bytes(16))
     if args.gpu_addon:
         mem_map.set_prop('GpuAddon', bytes(16))
 
